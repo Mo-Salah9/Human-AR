@@ -1,0 +1,19 @@
+{
+  "name": "ar-anatomy",
+  "version": "1.0.0",
+  "description": "Web-based AR anatomy: interactive 3D human body systems, layer by layer, for first-year medical students (Arabic/English).",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "selfsigned": "^2.4.1"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "meshoptimizer": "^1.3.0",
+    "three": "^0.160.0"
+  }
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <title>التشريح بالواقع المعزز | AR Anatomy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.8/build/index.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Camera passthrough (fallback AR for iPad / devices without WebXR) -->
+  <video id="camfeed" playsinline muted autoplay></video>
+
+  <!-- WebGL viewport -->
+  <div id="viewport"></div>
+
+  <!-- Everything inside #overlay is also shown as DOM overlay inside WebXR AR -->
+  <div id="overlay">
+
+    <header class="topbar ui-block">
+      <div class="brand">
+        <div class="logo">🫀</div>
+        <div>
+          <h1 data-i18n="appTitle"></h1>
+          <p data-i18n="appSubtitle"></p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="btnLayers" class="btn icon" data-i18n-title="layers">☰ <span data-i18n="layers"></span></button>
+        <button id="btnAR" class="btn primary" data-i18n-title="ar">◎ <span data-i18n="ar"></span></button>
+        <button id="btnCamera" class="btn" data-i18n-title="camera">📷 <span data-i18n="camera"></span></button>
+        <button id="btnQuiz" class="btn" data-i18n-title="quiz">🎯 <span data-i18n="quiz"></span></button>
+        <button id="btnLang" class="btn">EN</button>
+        <button id="btnHelp" class="btn icon">?</button>
+      </div>
+    </header>
+
+    <!-- Layers / systems panel -->
+    <aside id="layersPanel" class="panel side-start ui-block">
+      <div class="panel-scroll">
+        <div class="search-wrap">
+          <input id="searchInput" type="search" autocomplete="off" data-i18n-ph="searchPh">
+          <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <section class="block">
+          <div class="block-title"><span data-i18n="peel"></span> <b id="peelLabel"></b></div>
+          <input id="peelSlider" type="range" min="0" max="4" step="1" value="0">
+          <div class="peel-steps" id="peelSteps"></div>
+        </section>
+
+        <section class="block">
+          <div class="block-title"><span data-i18n="explode"></span></div>
+          <input id="explodeSlider" type="range" min="0" max="1" step="0.01" value="0">
+        </section>
+
+        <section class="block">
+          <div class="block-title" data-i18n="systems"></div>
+          <div id="systemsList"></div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Part information panel -->
+    <section id="infoPanel" class="panel side-end ui-block hidden">
+      <div class="info-head">
+        <div>
+          <span id="infoSystem" class="sys-badge"></span>
+          <span id="infoLayer" class="layer-badge"></span>
+          <h2 id="infoTitle"></h2>
+          <div id="infoSub" class="latin"></div>
+        </div>
+        <button id="infoClose" class="btn icon ghost">✕</button>
+      </div>
+      <div class="tabs" id="infoTabs">
+        <button data-tab="desc" class="active" data-i18n="overview"></button>
+        <button data-tab="func" data-i18n="function"></button>
+        <button data-tab="clin" data-i18n="clinical"></button>
+        <button data-tab="facts" data-i18n="facts"></button>
+      </div>
+      <div id="infoBody" class="info-body"></div>
+      <div class="actions">
+        <button class="btn sm" data-act="focus">🔍 <span data-i18n="focus"></span></button>
+        <button class="btn sm" data-act="isolate">◉ <span data-i18n="isolate"></span></button>
+        <button class="btn sm" data-act="hide">🚫 <span data-i18n="hide"></span></button>
+        <button class="btn sm" data-act="ghost">◌ <span data-i18n="ghost"></span></button>
+        <button class="btn sm" data-act="pull">⤴ <span data-i18n="pullOut"></span></button>
+        <button class="btn sm" data-act="speak">🔊 <span data-i18n="speak"></span></button>
+      </div>
+      <div class="actions manip">
+        <span class="manip-label" data-i18n="manipulate"></span>
+        <button class="btn sm" data-tmode="translate">✥ <span data-i18n="move"></span></button>
+        <button class="btn sm" data-tmode="rotate">⟳ <span data-i18n="rotate"></span></button>
+        <button class="btn sm" data-tmode="scale">⤢ <span data-i18n="scale"></span></button>
+        <button class="btn sm" data-act="resetPart">↺ <span data-i18n="resetPart"></span></button>
+      </div>
+    </section>
+
+    <!-- Quiz panel -->
+    <section id="quizPanel" class="panel quiz ui-block hidden">
+      <div class="quiz-head">
+        <div class="quiz-types">
+          <button class="btn sm" data-qtype="name" data-i18n="quizName"></button>
+          <button class="btn sm" data-qtype="find" data-i18n="quizFind"></button>
+        </div>
+        <div class="score"><span data-i18n="score"></span>: <b id="quizScore">0 / 0</b></div>
+        <button id="quizClose" class="btn icon ghost">✕</button>
+      </div>
+      <div id="quizQuestion" class="quiz-q"></div>
+      <div id="quizOptions" class="quiz-options"></div>
+      <div class="quiz-foot">
+        <div id="quizFeedback"></div>
+        <button id="quizNext" class="btn primary sm" data-i18n="next"></button>
+      </div>
+    </section>
+
+    <!-- Bottom toolbar -->
+    <nav class="toolbar ui-block">
+      <button class="btn sm" id="btnResetView">⌂ <span data-i18n="resetView"></span></button>
+      <button class="btn sm" id="btnShowAll">👁 <span data-i18n="showAll"></span></button>
+      <button class="btn sm" id="btnResetAll">↺ <span data-i18n="resetAll"></span></button>
+      <button class="btn sm" id="btnAutoRotate">⟲ <span data-i18n="autoRotate"></span></button>
+      <button class="btn sm" id="btnLabels">🏷 <span data-i18n="labels"></span></button>
+    </nav>
+
+    <!-- AR controls -->
+    <div id="arControls" class="ui-block hidden">
+      <div id="arHint" class="ar-hint"></div>
+      <div class="ar-buttons">
+        <button class="btn sm" id="arTable" data-i18n="tableSize"></button>
+        <button class="btn sm" id="arLife" data-i18n="lifeSize"></button>
+        <button class="btn sm" id="arReposition" data-i18n="reposition"></button>
+        <button class="btn sm danger" id="arExit" data-i18n="exitAR"></button>
+      </div>
+    </div>
+
+    <div id="hint" class="hint" data-i18n="selectHint"></div>
+    <div id="tooltip"></div>
+    <div id="toast"></div>
+
+    <div id="helpModal" class="modal ui-block hidden">
+      <div class="modal-card">
+        <button id="helpClose" class="btn icon ghost modal-x">✕</button>
+        <div id="helpContent"></div>
+      </div>
+    </div>
+
+    <div id="loading">
+      <div class="load-logo">🫀</div>
+      <div class="load-title" data-i18n="appTitle"></div>
+      <div class="load-sub" data-i18n="loading">...</div>
+      <div class="load-track"><div id="loadBar"></div></div>
+      <div id="loadPct">0%</div>
+      <div class="credit">3D anatomy: BodyParts3D © The Database Center for Life Science — CC BY-SA 2.1 JP</div>
+    </div>
+    <a class="credit-corner ui-block" href="https://lifesciencedb.jp/bp3d/" target="_blank" rel="noopener">3D: BodyParts3D © DBCLS · CC BY-SA 2.1 JP</a>
+  </div>
+
+  <div id="errorBox"></div>
+  <script>
+    // Show runtime errors on screen (tablets have no console)
+    function showErr(msg) { var b = document.getElementById('errorBox'); b.style.display = 'block'; b.textContent += msg + '\n'; }
+    window.addEventListener('error', function (e) { showErr('Error: ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '')); });
+    window.addEventListener('unhandledrejection', function (e) { showErr('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
